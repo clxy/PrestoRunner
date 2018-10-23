@@ -5,13 +5,14 @@ import com.amazonaws.util.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import java.net.InetAddress;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.Statement;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 
 public class Runner {
     private static final Log log = LogFactory.getLog(Runner.class);
+    private static final String CMD = "presto-cli --file %s";
 
     public static void main(String[] args) throws Exception {
         if (args == null || args.length != 1) {
@@ -24,29 +25,24 @@ public class Runner {
             throw new RuntimeException("パスが間違っている：" + path);
         }
 
-        log.info("Script:\n" + script);
         executeScript(script);
     }
 
     private static void executeScript(String script) throws Exception {
-        String url = String.format(
-            "jdbc:presto://%s:8889/hive/default",
-            InetAddress.getLocalHost().getHostName()
-        );
+        String cmd = String.format(CMD, script);
+        log.info("Execute:" + cmd);
 
-        Class.forName("com.facebook.presto.jdbc.PrestoDriver");
-        try (
-            Connection conn = DriverManager.getConnection(url, "hadoop", null);
-            Statement stmt = conn.createStatement()
-        ) {
-            for (String s : script.split(";\n")) {
-                log.info("Running:\n" + s);
-                stmt.execute(s);
-            }
+        Process p = Runtime.getRuntime().exec(cmd);
+        p.waitFor();
+
+        BufferedReader reader = new BufferedReader(new InputStreamReader(p.getInputStream()));
+        String line;
+        while ((line = reader.readLine()) != null) {
+            log.info(line);
         }
     }
 
-    private static String getScript(String path) {
+    private static String getScript(String path) throws Exception {
         if (StringUtils.isNullOrEmpty(path)) return null;
 
         path = path.replaceAll("^(s|S)3://", "");
@@ -55,16 +51,12 @@ public class Runner {
 
         String bucket = path.substring(0, slash);
         String key = path.substring(slash + 1);
+        log.info(String.format("Load Script at %s / %s", bucket, key));
 
-        log.info(String.format(
-            "Load Script at %s / %s",
-            bucket, key
-        ));
-        try {
-            return AmazonS3ClientBuilder.defaultClient().getObjectAsString(bucket, key);
-        } catch (Exception e) {
-            log.error("Load Script Error:", e);
-            return null;
-        }
+        String script = AmazonS3ClientBuilder.defaultClient().getObjectAsString(bucket, key);
+        log.info("Script:\n" + script);
+        Files.write(Paths.get(key), script.getBytes());
+
+        return key;
     }
 }

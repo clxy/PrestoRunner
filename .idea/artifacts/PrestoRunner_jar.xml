@@ -3,7 +3,6 @@
     <output-path>$PROJECT_DIR$/out/artifacts/PrestoRunner_jar</output-path>
     <root id="archive" name="PrestoRunner.jar">
       <element id="module-output" name="PrestoRunner" />
-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/com/facebook/presto/presto-jdbc/0.212/presto-jdbc-0.212.jar" path-in-jar="/" />
     </root>
   </artifact>
 </component>
