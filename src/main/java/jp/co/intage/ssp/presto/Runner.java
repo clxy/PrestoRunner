@@ -39,7 +39,10 @@ public class Runner {
             Connection conn = DriverManager.getConnection(url, "hadoop", null);
             Statement stmt = conn.createStatement()
         ) {
-            stmt.execute(script);
+            for (String s : script.split(";\n")) {
+                log.info("Running:\n" + s);
+                stmt.execute(s);
+            }
         }
     }
 
