@@ -8,6 +8,7 @@ import org.apache.commons.logging.LogFactory;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 
 public class Runner {
@@ -42,21 +43,23 @@ public class Runner {
         }
     }
 
-    private static String getScript(String path) throws Exception {
-        if (StringUtils.isNullOrEmpty(path)) return null;
+    private static String getScript(String s3Path) throws Exception {
+        if (StringUtils.isNullOrEmpty(s3Path)) return null;
 
-        path = path.replaceAll("^(s|S)3://", "");
-        int slash = path.indexOf('/');
-        if (slash < 1 || slash == path.length()) return null;
+        s3Path = s3Path.replaceAll("^(s|S)3://", "");
+        int slash = s3Path.indexOf('/');
+        if (slash < 1 || slash == s3Path.length()) return null;
 
-        String bucket = path.substring(0, slash);
-        String key = path.substring(slash + 1);
-        log.info(String.format("Load Script at %s / %s", bucket, key));
+        String bucket = s3Path.substring(0, slash);
+        String key = s3Path.substring(slash + 1);
+        log.info(String.format("Load Script from %s:%s", bucket, key));
 
         String script = AmazonS3ClientBuilder.defaultClient().getObjectAsString(bucket, key);
         log.info("Script:\n" + script);
-        Files.write(Paths.get(key), script.getBytes());
 
-        return key;
+        Path file = Paths.get(key).getFileName();
+        Files.write(file, script.getBytes());
+
+        return file.toAbsolutePath().toString();
     }
 }
