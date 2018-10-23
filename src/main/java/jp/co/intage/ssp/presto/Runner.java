@@ -31,16 +31,22 @@ public class Runner {
 
     private static void executeScript(String script) throws Exception {
         String cmd = String.format(CMD, script);
-        log.info("Execute:" + cmd);
+        log.info(cmd);
 
-        Process p = Runtime.getRuntime().exec(cmd);
-        p.waitFor();
+        ProcessBuilder pb = new ProcessBuilder("presto-cli", "--file", script);
+        pb.redirectErrorStream(true); // 標準エラーを標準出力にマージする
+        Process process = pb.start();
+        process.waitFor();
 
-        BufferedReader reader = new BufferedReader(new InputStreamReader(p.getInputStream()));
+        BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
         String line;
         while ((line = reader.readLine()) != null) {
             log.info(line);
         }
+
+        int exitValue = process.exitValue();
+        log.info("戻り値：" + exitValue);
+        if (exitValue != 0) throw new RuntimeException("スクリプト失敗！");
     }
 
     private static String getScript(String s3Path) throws Exception {
