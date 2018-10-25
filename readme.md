@@ -3,6 +3,8 @@
 * Use presto-cli or Presto JDBC driver
 
 ### Usage
+* Add custom jar step on EMR
+* Execute jar manually ↓
 ```
 hadoop jar PrestoRunner.jar #{s3 path} #{ cli | jdbc(default) }
 ```
