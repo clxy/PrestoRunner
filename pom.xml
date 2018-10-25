@@ -26,5 +26,10 @@
             <artifactId>aws-java-sdk</artifactId>
             <version>1.11.433</version>
         </dependency>
+        <dependency>
+            <groupId>com.facebook.presto</groupId>
+            <artifactId>presto-jdbc</artifactId>
+            <version>0.212</version>
+        </dependency>
     </dependencies>
 </project>

@@ -5,48 +5,33 @@ import com.amazonaws.util.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.util.HashMap;
+import java.util.Map;
 
 public class Runner {
     private static final Log log = LogFactory.getLog(Runner.class);
-    private static final String CMD = "presto-cli --file %s";
+    private static final Map<String, Operator> OPERATORS =
+        new HashMap<String, Operator>() {{
+            put("cli", new CliOperator());
+            put("jdbc", new JdbcOperator());
+        }};
 
     public static void main(String[] args) throws Exception {
-        if (args == null || args.length != 1) {
-            throw new RuntimeException("スクリプトをしてください！");
+        if (args == null || args.length < 1) {
+            throw new RuntimeException("スクリプトを指定してください！");
         }
 
         String path = args[0];
         String script = getScript(path);
         if (script == null) {
-            throw new RuntimeException("パスが間違っている：" + path);
+            throw new RuntimeException("パスが間違っている : " + path);
         }
 
-        executeScript(script);
-    }
+        log.info("Script:\n" + script);
 
-    private static void executeScript(String script) throws Exception {
-        String cmd = String.format(CMD, script);
-        log.info(cmd);
-
-        ProcessBuilder pb = new ProcessBuilder("presto-cli", "--file", script);
-        pb.redirectErrorStream(true); // 標準エラーを標準出力にマージする
-        Process process = pb.start();
-        process.waitFor();
-
-        BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-        String line;
-        while ((line = reader.readLine()) != null) {
-            log.info(line);
-        }
-
-        int exitValue = process.exitValue();
-        log.info("戻り値：" + exitValue);
-        if (exitValue != 0) throw new RuntimeException("スクリプト失敗！");
+        String operator = "jdbc";
+        if (args.length >= 2) operator = args[1];
+        OPERATORS.get(operator).operate(script);
     }
 
     private static String getScript(String s3Path) throws Exception {
@@ -60,12 +45,6 @@ public class Runner {
         String key = s3Path.substring(slash + 1);
         log.info(String.format("Load Script from %s:%s", bucket, key));
 
-        String script = AmazonS3ClientBuilder.defaultClient().getObjectAsString(bucket, key);
-        log.info("Script:\n" + script);
-
-        Path file = Paths.get(key).getFileName();
-        Files.write(file, script.getBytes());
-
-        return file.toAbsolutePath().toString();
+        return AmazonS3ClientBuilder.defaultClient().getObjectAsString(bucket, key);
     }
 }
